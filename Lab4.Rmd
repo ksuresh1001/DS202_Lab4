@@ -1,0 +1,166 @@
+---
+title: "Lab4"
+author: "Karthikcharan Suresh"
+date: "10/24/2019"
+output: html_document
+---
+Github username: ksuresh1001
+
+Repository link : https://github.com/ksuresh1001/ds202_lab4
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+## Loading Data: Cyclone Football 
+
+```{r}
+library(readxl)
+defense <- read_excel('cyclonesFootball2018.xlsx', sheet='Defensive')
+str(defense)
+```
+
+```{r}
+offense <- read_excel('cyclonesFootball2018.xlsx', sheet='Offensive')
+bio <- read_excel('cyclonesFootball2018.xlsx', sheet='Biography')
+```
+
+
+## Part one: Cleaning data
+# 1.
+```{r}
+library(dplyr)
+library(tidyr)
+offense$Name<-as.factor(offense$Name)
+offense$Opponent_Opponent<-as.factor(offense$Opponent_Opponent)
+defense$Opponent_Opponent<-as.factor(defense$Opponent_Opponent)
+defense$Name<-as.factor(defense$Name)
+```
+
+# 2.
+```{r}
+bio$Weight<-as.numeric(bio$Weight)
+colo<-c("Receiving_REC",
+        "Receiving_YDS",
+        "Receiving_TD",
+        "Rushing_ATT",
+        "Rushing_YDS",
+        "Rushing_TD",
+        "Passing_CMP-ATT",
+        "Passing_YDS",
+        "Passing_TD",
+        "Passing_INT")
+offense[colo]<-sapply(offense[colo], as.numeric)
+cold<-c("Tackles_Solo","Tackles_ASST","Tackles_TFL","Tackles_Sack","Turnover_FF","Turnover_FR","Turnover_INT","Pass_QBH","Pass_PB")
+defense[cold]<-sapply(defense[cold],as.numeric)
+```
+
+# 3.
+```{r}
+bio<-separate(data=bio,col=Height,
+              into=c("Feet","inc"),
+              sep="\\-")
+bio$Feet<-as.numeric(bio$Feet)
+bio$inc<-as.numeric(bio$inc)
+bio$height_in_inches<-(bio$Feet*12+bio$inc)
+head(bio)
+colb<-c("Name",
+        "Position",
+        "Class",
+        "Hometown",
+        "Highschool")
+bio[colb]<-lapply(bio[colb],factor)
+bioClean<-select(bio,-c("Feet","inc"))
+head(bioClean)
+defClean<-defense
+offClean<-offense
+```
+
+# 4.
+```{r}
+sapply(offClean,class)
+sapply(defClean,class)
+sapply(bioClean,class)
+```
+
+## Part 2 Tidying Part A
+# 2.1.
+```{r}
+defCleanGather = gather(defClean,key="Statistic", value="Value", 3:11)
+```
+
+# 2.2.
+```{r, echo=FALSE}
+library(ggplot2)
+ggplot(defCleanGather, aes(x=Value)) + geom_histogram(binwidth=0.8) + facet_wrap(~Statistic)
+```
+
+The rarest defensive skills is the turnover skills because most of those values are 0 and only a few are 1
+
+# 2.3.
+```{r, echo=FALSE}
+WVKSsolo <- defCleanGather %>%
+  filter(Statistic=="Tackles_Solo") %>% 
+  spread(key = Opponent_Opponent,
+         value = Value)
+ggplot(WVKSsolo, aes(x=`West Virginia`, y=`Kansas State`)) + geom_point() + ggtitle("Solo Tackles Against West Virginia and Kansas State")
+```
+```
+
+#We had a much better defense against Kansas State compared to west virginia as there were large number of solo tackles against Kansas State
+
+
+## Part 2 Tidying Part B
+# 1.
+```{r}
+bioCleanSeparate <- separate(bioClean, 
+                             Hometown, 
+                             into = c("City","State"), 
+                             sep = ",")
+```
+
+# 2.
+```{r, echo=FALSE}
+StateCount <- bioCleanSeparate %>% 
+              group_by(State) %>% 
+              summarize(n=n())
+```
+
+#How many players are there from each state?: 
+Arizona=3, Arkansas=2, Australia=2, California=8, D.C.=1, Florida=8, Georgia=2, Illinois=5, Iowa=44, Kansas=3, Massachusettes=1, Maryland=1, Michigan=5, Minnesota=2, Missippi=1, Montana=1, Nebraska=1, Nigeria=1, Ohio=10, Oklahoma=4, Pennsylvania=2, South Carolina=2, Texas=9, Virginia=1, Wisconsin=4.
+
+## Part three: Joining data frames
+
+# 3.1.
+
+```{r}
+offbio<-inner_join(offClean,
+                   bioClean,
+                   by="Name")
+colnames(offbio)
+```
+
+# 3.2.
+
+```{r, echo=FALSE}
+ggplot(data=offbio,
+       aes(x=Weight,
+           y=Receiving_YDS))+
+           geom_point()+  
+           labs(x="Weight",
+           y="Receiving Yards",
+           title="Scatterplot of Weight and Receving Yards")
+```
+
+yes, there is relationship as Players who weigh 225 pounds have the highest number of recieving yards. 
+
+#3.3 How did weight matter when it comes to Passing_YDS
+
+```{r, echo=FALSE}
+ggplot(data=offbio,
+       aes(x=Weight,
+           y=Passing_YDS))+
+           geom_point()+  
+           labs(x="Weight",
+           y="Solo Tackles",
+           title="Scatterplot of Weight and Passing Yards")
+           
